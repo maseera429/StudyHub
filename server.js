@@ -7,24 +7,32 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const db = mysql.createConnection({
+const db = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
   port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER || "root",
   password: process.env.DB_PASSWORD || "",
   database: process.env.DB_NAME || "studyhub",
+
   ssl: {
     rejectUnauthorized: false
   },
+
+  waitForConnections: true,
+  connectionLimit: 5,
+  queueLimit: 0,
+
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
   connectTimeout: 30000
 });
-db.connect((err) => {
-  if (err) {
-    console.error("MySQL connection failed:", err);
-    return;
-  }
 
-  console.log("MySQL connected successfully ✅");
+db.query("SELECT 1", (err) => {
+  if (err) {
+    console.error("MySQL connection test failed:", err);
+  } else {
+    console.log("MySQL connected successfully ✅");
+  }
 });
 
 app.get("/", (req, res) => {
@@ -38,6 +46,8 @@ app.get("/api/materials", (req, res) => {
 
   db.query(sql, (err, results) => {
     if (err) {
+      console.error("GET materials error:", err);
+
       return res.status(500).json({
         error: err.message
       });
@@ -60,6 +70,8 @@ app.post("/api/materials", (req, res) => {
     [title, subject, description, file_url],
     (err, result) => {
       if (err) {
+        console.error("POST materials error:", err);
+
         return res.status(500).json({
           error: err.message
         });
@@ -80,6 +92,8 @@ app.delete("/api/materials/:id", (req, res) => {
 
   db.query(sql, [id], (err) => {
     if (err) {
+      console.error("DELETE materials error:", err);
+
       return res.status(500).json({
         error: err.message
       });
